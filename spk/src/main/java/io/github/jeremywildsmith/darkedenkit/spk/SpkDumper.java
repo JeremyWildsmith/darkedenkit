@@ -29,12 +29,14 @@ public class SpkDumper implements Runnable
 	private final String m_sourceSpkFile;
 	private final String m_sourceSpkiFile;
 	private final URI m_destinationDirectory;
-
-	public SpkDumper(String sourceSpkFile, String sourceSpkiFile, URI destinationDirectory)
+	private final boolean[] m_spkCopyFillPattern;
+	
+	public SpkDumper(String sourceSpkFile, String sourceSpkiFile, URI destinationDirectory, boolean[] spkCopyFillPattern)
 	{
 		m_sourceSpkFile = sourceSpkFile;
 		m_sourceSpkiFile = sourceSpkiFile;
 		m_destinationDirectory = destinationDirectory;
+		m_spkCopyFillPattern = spkCopyFillPattern;
 	}
 	
 	private BufferedImage filterWhiteToTransparent(Image img)
@@ -81,13 +83,13 @@ public class SpkDumper implements Runnable
 				for(int i : spkGraphicIndices)
 				{
 					spk.getChannel().position(i);
-					BufferedImage imgBuffer = filterWhiteToTransparent(spkExtractor.decompressImage(Channels.newInputStream(spk.getChannel())));
+					BufferedImage imgBuffer = filterWhiteToTransparent(spkExtractor.decompressImage(Channels.newInputStream(spk.getChannel()), m_spkCopyFillPattern));
 					
 					m_logger.info(String.format("Extracted image at origin %d, of width %d and height %d", i, imgBuffer.getWidth(), imgBuffer.getHeight()));
 				
 					try
 					{
-						ImageIO.write(imgBuffer, "png", new File(m_destinationDirectory.resolve(String.format("./texture%d.png", i))));
+						ImageIO.write(imgBuffer, "png", new File(m_destinationDirectory.resolve(String.format("./texture_%d_0x%08X.png", i, i))));
 					} catch (IOException e)
 					{
 						
@@ -103,15 +105,25 @@ public class SpkDumper implements Runnable
 	
 	public static void main(String[] args)
 	{
-		m_logger.info("[spk source] [spki source] [destination directory]");
+		m_logger.info("[spk source] [spki source] [destination directory] [copy fill pattern = 01 for spk, = 011 for ispk]");
 		
-		if(args.length < 3)
+		if(args.length < 4)
 			m_logger.error("Insufficient arguments provided to run spk dump operation");
 		else
 		{
+			String copyFillPattern = args[3];
+			
+			if(copyFillPattern.isEmpty())
+				m_logger.error("Invalid copy fill pattern supplied.");
+			
+			boolean copyFillPatternBuffer[] = new boolean[copyFillPattern.length()];
+			
+			for(int i = 0; i < copyFillPattern.length(); i++)
+				copyFillPatternBuffer[i] = copyFillPattern.charAt(i) == '1';
+			
 			File f = new File(args[2]);
 			if(f.exists() && f.isDirectory())
-				new SpkDumper(args[0], args[1], f.toURI()).run();
+				new SpkDumper(args[0], args[1], f.toURI(), copyFillPatternBuffer).run();
 			else
 				m_logger.error("Destination argument must be a directory that already exists. Operation aborted. The provided destination argument was not valid.");
 		}

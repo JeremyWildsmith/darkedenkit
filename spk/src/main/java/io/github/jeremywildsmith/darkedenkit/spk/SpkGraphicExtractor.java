@@ -23,8 +23,11 @@ public class SpkGraphicExtractor
 	
 	//Since the streams are provided by the caller, it is their responsibility to close them.
 	@SuppressWarnings("resource")
-	private void decompressChunkStream(InputStream is, OutputStream os) throws SpkGraphicParseException
+	private void decompressChunkStream(InputStream is, OutputStream os, boolean[] copyFillPattern) throws SpkGraphicParseException
 	{
+		if(copyFillPattern.length == 0)
+			throw new IllegalArgumentException("Copy fill pattern must contain at least one element");
+		
 		LittleEndianDataInputStream dis = new LittleEndianDataInputStream(is);
 		LittleEndianDataOutputStream dos = new LittleEndianDataOutputStream(os);
 		
@@ -32,11 +35,11 @@ public class SpkGraphicExtractor
 
 		try
 		{
-			while(dis.available() != 0)
+			for(int i = 0; dis.available() != 0; i++)
 			{
 				short wordC = dis.readShort();
 					
-				if(isCopyNotFill)
+				if(copyFillPattern[i % copyFillPattern.length])
 				{
 					for(int x = 0; x < wordC; x++)
 						dos.writeShort(dis.readShort());
@@ -119,7 +122,7 @@ public class SpkGraphicExtractor
 	
 	//Since the caller provided the streams, it is their responsibility to close them.
 	@SuppressWarnings("resource")
-	public void decompressImage(InputStream compressedImageIn, OutputStream bitmapOut) throws SpkGraphicParseException
+	public void decompressImage(InputStream compressedImageIn, OutputStream bitmapOut, boolean[] spkCopyFillPattern) throws SpkGraphicParseException
 	{
 		LittleEndianDataInputStream dis = new LittleEndianDataInputStream(compressedImageIn);
 		LittleEndianDataOutputStream dos = new LittleEndianDataOutputStream(bitmapOut);
@@ -175,7 +178,7 @@ public class SpkGraphicExtractor
 				if(totalRead < chunkBuffer.length)
 					throw new SpkGraphicParseException(String.format("Insufficient data to complete decompression of chunck, missing %d bytes.", chunkBuffer.length - totalRead));
 				
-				decompressChunkStream(new ByteArrayInputStream(chunkBuffer), chunckDecompressionBuffer);
+				decompressChunkStream(new ByteArrayInputStream(chunkBuffer), chunckDecompressionBuffer, spkCopyFillPattern);
 
 				decompressedWidthChunks.add(chunckDecompressionBuffer.toByteArray());
 			}else
@@ -209,12 +212,12 @@ public class SpkGraphicExtractor
 		}
 	}
 	
-	public Image decompressImage(InputStream compressedImageIn) throws SpkGraphicParseException
+	public Image decompressImage(InputStream compressedImageIn, boolean[] spkCopyFillPattern) throws SpkGraphicParseException
 	{
 		try
 		{
 			ByteArrayOutputStream bitmapBuffer = new ByteArrayOutputStream();
-			decompressImage(compressedImageIn, bitmapBuffer);
+			decompressImage(compressedImageIn, bitmapBuffer, spkCopyFillPattern);
 
 			return ImageIO.read(new ByteArrayInputStream(bitmapBuffer.toByteArray()));
 		} catch (IOException e)
