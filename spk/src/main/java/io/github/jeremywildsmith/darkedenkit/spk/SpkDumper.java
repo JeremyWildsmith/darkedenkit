@@ -86,10 +86,15 @@ public class SpkDumper implements Runnable
 					BufferedImage imgBuffer = filterWhiteToTransparent(spkExtractor.decompressImage(Channels.newInputStream(spk.getChannel()), m_spkCopyFillPattern));
 					
 					m_logger.info(String.format("Extracted image at origin %d, of width %d and height %d", i, imgBuffer.getWidth(), imgBuffer.getHeight()));
-				
+					
 					try
 					{
-						ImageIO.write(imgBuffer, "png", new File(m_destinationDirectory.resolve(String.format("./texture_%d_0x%08X.png", i, i))));
+						if(!ImageIO.write(imgBuffer, "png", new File(m_destinationDirectory.resolve(String.format("./texture_%d_0x%08X.png", i, i)))))
+						{
+							m_logger.error(String.format("No approriate writer found for informal image format of name png. Please assure an approiate writer is in the classpath. Extraction aborted."));
+							break;
+						}
+						
 					} catch (IOException e)
 					{
 						
@@ -115,17 +120,19 @@ public class SpkDumper implements Runnable
 			
 			if(copyFillPattern.isEmpty())
 				m_logger.error("Invalid copy fill pattern supplied.");
-			
-			boolean copyFillPatternBuffer[] = new boolean[copyFillPattern.length()];
-			
-			for(int i = 0; i < copyFillPattern.length(); i++)
-				copyFillPatternBuffer[i] = copyFillPattern.charAt(i) == '1';
-			
-			File f = new File(args[2]);
-			if(f.exists() && f.isDirectory())
-				new SpkDumper(args[0], args[1], f.toURI(), copyFillPatternBuffer).run();
 			else
-				m_logger.error("Destination argument must be a directory that already exists. Operation aborted. The provided destination argument was not valid.");
+			{
+				boolean copyFillPatternBuffer[] = new boolean[copyFillPattern.length()];
+				
+				for(int i = 0; i < copyFillPattern.length(); i++)
+					copyFillPatternBuffer[i] = copyFillPattern.charAt(i) == '1';
+				
+				File f = new File(args[2]);
+				if(f.exists() && f.isDirectory())
+					new SpkDumper(args[0], args[1], f.toURI(), copyFillPatternBuffer).run();
+				else
+					m_logger.error("Destination argument must be a directory that already exists. Operation aborted. The provided destination argument was not valid.");
+			}
 		}
 	}
 }
