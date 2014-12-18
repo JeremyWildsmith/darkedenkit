@@ -1,4 +1,4 @@
-package io.github.jeremywildsmith.darkedenkit.spk;
+package io.github.jeremywildsmith.darkedenkit.dumper.pk;
 
 import io.github.jeremywildsmith.darkedenkit.LittleEndianDataInputStream;
 
@@ -6,7 +6,7 @@ import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 
-public class SpkiIndexExtractor
+public class PkIndexExtractor
 {
 	public int[] getGraphicIndice(InputStream spkiSource) throws SpkiParseException
 	{
