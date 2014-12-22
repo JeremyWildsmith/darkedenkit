@@ -35,6 +35,7 @@ public final class PkCompressedStream extends InputStream
 		if(m_pkSource.available() == 0)
 			return new NullInputStream();
 		
+		@SuppressWarnings("resource")
 		InputStream extractSource = new NullInputStream();
 		
 		try
@@ -44,6 +45,10 @@ public final class PkCompressedStream extends InputStream
 			while(extracted < length && m_pkSource.available() != 0)
 			{
 				int operationLength = m_pkSource.readShort() * 2;
+				
+				if(operationLength < 0)
+					throw new IOException("Unexpected operation length.");
+				
 				extracted += operationLength;
 				
 				if(m_copyFillPattern[m_operationIndex % m_copyFillPattern.length])

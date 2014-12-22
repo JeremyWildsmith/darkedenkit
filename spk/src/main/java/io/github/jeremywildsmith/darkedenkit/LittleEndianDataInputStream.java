@@ -363,6 +363,25 @@ public final class LittleEndianDataInputStream extends InputStream {
 			throw new EOFException();
 		return ((ch1 << 24) + (ch2 << 16) + (ch3 << 8) + (ch4 << 0));
 	}
+	
+	public final long readUnsignedInt() throws IOException {
+		// TODO: has this been benchmarked against two alternate
+		// implementations?
+		// 1) Integer.reverseBytes(in.readInt())
+		// 2) keep a member byte[4], wrapped by an IntBuffer with appropriate
+		// endianness set,
+		// and call IntBuffer.get()
+		// Both seem like they might be faster.
+		int ch4 = in.read();
+		int ch3 = in.read();
+		int ch2 = in.read();
+		int ch1 = in.read();
+		if ((ch1 | ch2 | ch3 | ch4) < 0)
+			throw new EOFException();
+		return ((ch1 << 24) + (ch2 << 16) + (ch3 << 8) + (ch4 << 0));
+	}
+	
+	
 
 	private byte readBuffer[] = new byte[8];
 

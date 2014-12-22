@@ -8,7 +8,7 @@ import java.io.InputStream;
 
 public class PkIndexExtractor
 {
-	public int[] getGraphicIndice(InputStream spkiSource) throws SpkiParseException
+	public long[] extract(InputStream spkiSource) throws PkiParseException
 	{
 		//Since the caller provided the input stream, it is their responsibility to close it.
 		@SuppressWarnings("resource")
@@ -17,42 +17,42 @@ public class PkIndexExtractor
 		int indexCount = 0;
 		try
 		{
-			indexCount = dis.readShort();
+			indexCount = dis.readUnsignedShort();
 		} catch (IOException e)
 		{
-			throw new SpkiParseException("Error occured while attempting to parse number of total indice in file.", e);
+			throw new PkiParseException("Error occured while attempting to parse number of total indice in file.", e);
 		}
 		
 		if(indexCount <= 0)
-			return new int[0];
+			return new long[0];
 		
-		int indice[] = new int[indexCount];
+		long indice[] = new long[indexCount];
 		
 		try
 		{
 			for(int i = 0; i < indexCount; i++)
-				indice[i] = dis.readInt();
+				indice[i] = dis.readUnsignedInt();
 		} catch(EOFException e)
 		{
-			throw new SpkiParseException("Unexpected eof before all indices could be read from file", e);
+			throw new PkiParseException("Unexpected eof before all indices could be read from file", e);
 		} catch(IOException e)
 		{
-			throw new SpkiParseException("IO error occured attempting to read spki file contents.", e);
+			throw new PkiParseException("IO error occured attempting to read spki file contents.", e);
 		}
 		
 		return indice;
 	}
 	
-	public static final class SpkiParseException extends Exception
+	public static final class PkiParseException extends Exception
 	{
 		private static final long serialVersionUID = 1L;
 	
-		private SpkiParseException(String message, Exception cause)
+		private PkiParseException(String message, Exception cause)
 		{
 			super(cause);
 		}
 		
-		private SpkiParseException(String message)
+		private PkiParseException(String message)
 		{
 			super(message);
 		}

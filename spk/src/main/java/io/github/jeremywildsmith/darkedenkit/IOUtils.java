@@ -2,6 +2,7 @@ package io.github.jeremywildsmith.darkedenkit;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -12,7 +13,8 @@ public final class IOUtils
 	{
 		ByteArrayOutputStream bos = new ByteArrayOutputStream(length);
 		
-		copy(source, bos, length);
+		if(copy(source, bos, length) != length)
+			throw new EOFException();
 		
 		return new ByteArrayInputStream(bos.toByteArray());
 	}

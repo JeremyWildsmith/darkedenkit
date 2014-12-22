@@ -32,13 +32,10 @@ public final class PkSpriteExtractor
 	
 	private static final byte[] SPRITE_FILL = new byte[] {-1};
 	
-	private final String m_outputImageFormat;
-	
 	private final boolean[] m_copyFillPattern;
 	
-	public PkSpriteExtractor(String outputImageFormat, boolean[] copyFillPattern)
+	public PkSpriteExtractor(boolean[] copyFillPattern)
 	{
-		m_outputImageFormat = outputImageFormat;
 		m_copyFillPattern = copyFillPattern;
 	}
 	
@@ -100,14 +97,13 @@ public final class PkSpriteExtractor
 		//Write color bitmasks. These are constant throughout all SPK graphics.
 		dos.writeInt(0xF800);
 		dos.writeInt(0x07E0);
-		dos.writeInt(0x07E0);
-		dos.writeInt(0x001F);
-		
+		dos.writeInt(0x1F);
+		dos.writeInt(0);
 	}
 	
 	//Since the caller provided the streams, it is their responsibility to close them.
 	@SuppressWarnings("resource")
-	public boolean decompressImage(InputStream compressedImageIn, OutputStream bitmapOut) throws IOException
+	private boolean decompressImage(InputStream compressedImageIn, OutputStream bitmapOut) throws IOException
 	{
 		LittleEndianDataInputStream dis = new LittleEndianDataInputStream(compressedImageIn);
 		LittleEndianDataOutputStream dos = new LittleEndianDataOutputStream(bitmapOut);
@@ -194,12 +190,11 @@ public final class PkSpriteExtractor
 		return img;
 	}
 	
-	public void extract(InputStream pkSource, OutputStream artifactOut) throws IOException
+	@Nullable
+	public BufferedImage extract(InputStream pkSource) throws IOException
 	{
 		Image extractedImage = decompressImage(pkSource);
 		BufferedImage imgBuffer = extractedImage == null ? generateNullImage() : filterWhiteToTransparent(extractedImage);
-		
-		if(!ImageIO.write(imgBuffer, m_outputImageFormat, artifactOut))
-			throw new IOException("No approriate writer found for informal image format of name png. Please assure an approiate writer is in the classpath. Extraction aborted.");
+		return imgBuffer;
 	}
 }
