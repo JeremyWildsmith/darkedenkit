@@ -34,7 +34,9 @@ import org.slf4j.LoggerFactory;
 
 public final class ArtifactAnimationDumper implements Runnable
 {
-	private static final int MILLISECONDS_PER_TIME_FACTOR = 25;
+	private static final int MILLISECONDS_PER_TIME_FACTOR = 100;
+
+	private static final Map<Integer, String> m_animationNames = new HashMap<>();
 	
 	private static final Logger m_logger = LoggerFactory.getLogger(ArtifactAnimationDumper.class);
 
@@ -52,26 +54,50 @@ public final class ArtifactAnimationDumper implements Runnable
 		m_destinationDirectory = destinationDirectory;
 
 		m_extractor = new PkSpriteExtractor(spkCopyFillPattern);
+		
+		m_animationNames.put(0, "idle");
+		m_animationNames.put(1, "melee_walk");
+		m_animationNames.put(2, "melee_attack");
+		m_animationNames.put(4, "flinch");
+		m_animationNames.put(5, "drain");
+		m_animationNames.put(6, "die");
+		m_animationNames.put(7, "gun_attack");
+		m_animationNames.put(8, "gun_attackFaster");
+		m_animationNames.put(9, "gun_attackLargeRecoil");
+		m_animationNames.put(10, "gun_attackLargeRecoilFaster");
+		m_animationNames.put(11, "sword_attack");
+		m_animationNames.put(36, "gun_walk");
+	}
+
+	private void compileJsonShadedGraphicMetadata(File destination, String animation) throws IOException
+	{
+		Map<String, Object> objectMapping = new HashMap<>();
+		
+		objectMapping.put("texture", String.format("../../texture/%s/texture.png", animation));
+	
+		ObjectMapper mapper = new ObjectMapper();
+		mapper.writerWithDefaultPrettyPrinter().writeValue(destination, objectMapping);		
 	}
 	
 	private void compileJsonSpriteMetadata(SpkSpriteSheet spritesheet, ArtifactAnimation artifactAnimation, File destination) throws IOException
 	{
+		final String directions[] = {"sw", "s", "se", "e", "ne", "n", "nw", "w"};
 		ArtifactAnimationPerspective perspectives[] = artifactAnimation.getPerspectives();
 		
 		Map<String, Object> objectMapping = new HashMap<>();
 		List<Map<String, Object>> animations = new ArrayList<>();
 		
 		objectMapping.put("scale", 1.0);
-		objectMapping.put("texture", "texture.png");
-		objectMapping.put("defaultAnimation", "0");
+		objectMapping.put("texture", "texture.sgf");
+		objectMapping.put("defaultAnimation", directions[0]);
 		objectMapping.put("animations", animations);
 		
 		for(int i = 0; i < perspectives.length; i++)
 		{
-			Map<String, Object> animation = new HashMap<String, Object>();
+			Map<String, Object> animation = new HashMap<>();
 			List<Map<String, Object>> frames = new ArrayList<>();
 			
-			animation.put("name", String.valueOf(i));
+			animation.put("name", directions[i]);
 			animation.put("frames", frames);
 			
 			animations.add(animation);
@@ -79,11 +105,11 @@ public final class ArtifactAnimationDumper implements Runnable
 			{
 				Rect2D frameRegion = spritesheet.getRegion(f.getSpki());
 				Map<String, Object> frame = new HashMap<>();
-				Map<String, Object> anchor = new HashMap<String, Object>();
-				Map<String, Object> region = new HashMap<String, Object>();
+				Map<String, Object> anchor = new HashMap<>();
+				Map<String, Object> region = new HashMap<>();
 				
-				anchor.put("x", f.getOriginX());
-				anchor.put("y", f.getOriginY());
+				anchor.put("x", -(f.getOriginX() + (frameRegion.width % 2 == 1 ? 1 : 0)) + 27);
+				anchor.put("y", -(f.getOriginY() + (frameRegion.height % 2 == 1 ? 1 : 0)) + 10);
 				
 				region.put("x", frameRegion.x);
 				region.put("y", frameRegion.y);
@@ -166,23 +192,27 @@ public final class ArtifactAnimationDumper implements Runnable
 		
 		for(int i = 0; i < animations.length; i++)
 		{
-			File animationDirectory = new File(destinationDirectory.resolve(String.format("./%d/", i)));
+			String name = m_animationNames.containsKey(i) ? m_animationNames.get(i) : String.valueOf(i);
+			
+			File animationTextureDirectory = new File(destinationDirectory.resolve(String.format("./texture/%s/", name)));
+			File defaultMetadataDirectory = new File(destinationDirectory.resolve(String.format("./default/%s/", name)));
 			
 			SpkSpriteSheet spritesheet = compileSpkSpritesheet(spk, spki, animations[i].getDependentSpki());
 	
 			//If the spritesheet is null, then there were no renderable frames in the animation (ie, it was likely culled out of the build. Ignore the animation.
 			if(spritesheet != null)
 			{
-				if(!animationDirectory.exists() && !animationDirectory.mkdirs())
+				if((!animationTextureDirectory.exists() && !animationTextureDirectory.mkdirs()) || (!defaultMetadataDirectory.exists() && !defaultMetadataDirectory.mkdirs()))
 					m_logger.error("Unable to create required directories to extract animation to. Not extracting animation.");
 				else
 				{
-					try(FileOutputStream fos = new FileOutputStream(new File(animationDirectory.toURI().resolve("./texture.png"))))
+					try(FileOutputStream fos = new FileOutputStream(new File(animationTextureDirectory.toURI().resolve("./texture.png"))))
 					{
 						ImageIO.write(spritesheet.getSpritesheet(), "png", fos);
 					}
-				
-					compileJsonSpriteMetadata(spritesheet, animations[i], new File(animationDirectory.toURI().resolve("./animation.jsf")));
+					
+					compileJsonShadedGraphicMetadata(new File(defaultMetadataDirectory.toURI().resolve("./texture.sgf")), name);
+					compileJsonSpriteMetadata(spritesheet, animations[i], new File(defaultMetadataDirectory.toURI().resolve("./animation.jsf")));
 				}
 			}
 		}
@@ -220,8 +250,8 @@ public final class ArtifactAnimationDumper implements Runnable
 	
 	private static final class SpkSpriteSheet
 	{
-		private BufferedImage m_spritesheet;
-		private Map<Integer, Rect2D> m_spkiMapping;
+		private final BufferedImage m_spritesheet;
+		private final Map<Integer, Rect2D> m_spkiMapping;
 		
 		public SpkSpriteSheet(BufferedImage spritesheet, Map<Integer, Rect2D> spkiMapping)
 		{

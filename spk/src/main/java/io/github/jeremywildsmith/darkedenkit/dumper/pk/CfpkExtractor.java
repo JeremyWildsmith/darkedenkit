@@ -31,8 +31,7 @@ public class CfpkExtractor
 			
 			for(int y = 0; y < numFrames; y++)
 			{
-				//We negate the y offset since dark eden considers positive Y to be upwards, where as we consider it to be downwards.
-				ArtifactAnimationFrame frame = new ArtifactAnimationFrame(dis.readUnsignedShort(), dis.readShort(), -dis.readShort());
+				ArtifactAnimationFrame frame = new ArtifactAnimationFrame(dis.readUnsignedShort(), dis.readShort(), dis.readShort());
 				
 				if(frames.size() > 0 && frames.get(frames.size() - 1).equals(frame))
 					frames.get(frames.size() - 1).incrementDurationFactor();
