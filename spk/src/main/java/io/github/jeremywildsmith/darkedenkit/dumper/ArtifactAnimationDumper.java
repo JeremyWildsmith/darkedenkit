@@ -17,6 +17,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.RandomAccessFile;
 import java.net.URI;
 import java.nio.channels.Channels;
@@ -189,7 +190,7 @@ public final class ArtifactAnimationDumper implements Runnable
 	private void exportArtifact(RandomAccessFile spk, Artifact artifact, long[] spki, URI destinationDirectory) throws IOException
 	{
 		ArtifactAnimation animations[] = artifact.getAnimations();
-		
+
 		for(int i = 0; i < animations.length; i++)
 		{
 			String name = m_animationNames.containsKey(i) ? m_animationNames.get(i) : String.valueOf(i);
@@ -218,6 +219,33 @@ public final class ArtifactAnimationDumper implements Runnable
 		}
 	}
 	
+	private void createIndexHtml(int numArtifacts, URI destinationDirectory)
+	{
+		StringBuilder sb = new StringBuilder();
+		sb.append("<html><body>");
+		for(int i = 0; i < numArtifacts; i++)
+		{
+			String source = "artifact" + i + "/texture/idle/texture.png";
+			sb.append("<b><center>");
+			sb.append(i);
+			sb.append("</b></center><br><img src=\"");
+			sb.append(source);
+			sb.append("\"/><br>");
+			sb.append("<br>");
+		}
+		
+		try(FileOutputStream fos = new FileOutputStream(new File(destinationDirectory.resolve("./index.html"))))
+		{
+			OutputStreamWriter os = new OutputStreamWriter(fos, "UTF-8");
+			os.write(sb.toString());
+		} catch (IOException e)
+		{
+			m_logger.error("Unable to print out index page.", e);
+		}
+		
+		sb.append("</body></html>");
+	}
+	
 	@Override
 	public final void run()
 	{
@@ -233,6 +261,7 @@ public final class ArtifactAnimationDumper implements Runnable
 			{
 				m_logger.info("Gathering artifact meta-data...");
 				Artifact[] artifacts = new CfpkExtractor().extract(cfpk);
+				createIndexHtml(artifacts.length, m_destinationDirectory);
 				
 				for(int i = 0; i < artifacts.length; i++)
 				{
